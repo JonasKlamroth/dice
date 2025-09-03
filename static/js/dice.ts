@@ -4,7 +4,7 @@ import * as doc from './docInteraction.js';
 // Socket.IO is loaded via CDN, so io is available globally
 declare const io: any;
 
-const socket = io("https://liarsdice.onrender.com:10000");
+const socket = io('https://liarsdice.onrender.com');
 socket.on('update_game_state', (gameState) => {updateUI(gameState);});
 socket.on('update_players', (playerString) => {
     document.getElementById('info-section').innerText = "Currently in the lobby: \n" + playerString;

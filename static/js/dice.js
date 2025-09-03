@@ -1,6 +1,6 @@
 import { Claim, Status } from './types.js';
 import * as doc from './docInteraction.js';
-const socket = io("https://liarsdice.onrender.com:10000");
+const socket = io('https://liarsdice.onrender.com');
 socket.on('update_game_state', (gameState) => { updateUI(gameState); });
 socket.on('update_players', (playerString, isHost) => {
     updateLobby(playerString, isHost);
