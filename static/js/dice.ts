@@ -4,18 +4,11 @@ import * as doc from './docInteraction.js';
 // Socket.IO is loaded via CDN, so io is available globally
 declare const io: any;
 
-
-const socket = io("http://192.168.1.104:5000");
-socket.on('connect', () => {
-    var playerID = getPlayerIdFromCookie();
-    if (playerID == null) {
-        console.debug("Did not find old player ID. Default to 0.");
-        playerID = "0";
-    } else {
-        localStorage.setItem("DICE_currentPlayerId", playerID);
-    }
-
-    socket.emit('register_player', playerID, socket.id);
+const socket = io("https://liarsdice.onrender.com");
+socket.on('update_game_state', (gameState) => {updateUI(gameState);});
+socket.on('update_players', (playerString) => {
+    document.getElementById('info-section').innerText = "Currently in the lobby: \n" + playerString;
+    createButton('info-section', 'startGame', 'Start Game', startGame);
 });
 
 socket.on('update_game_state', (gameState) => {updateUI(gameState);});

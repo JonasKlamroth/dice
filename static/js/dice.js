@@ -1,17 +1,6 @@
 import { Claim, Status } from './types.js';
 import * as doc from './docInteraction.js';
-const socket = io("http://192.168.1.104:5000");
-socket.on('connect', () => {
-    var playerID = getPlayerIdFromCookie();
-    if (playerID == null) {
-        console.debug("Did not find old player ID. Default to 0.");
-        playerID = "0";
-    }
-    else {
-        localStorage.setItem("DICE_currentPlayerId", playerID);
-    }
-    socket.emit('register_player', playerID, socket.id);
-});
+const socket = io("http://127.0.0.1:8000");
 socket.on('update_game_state', (gameState) => { updateUI(gameState); });
 socket.on('update_players', (playerString, isHost) => {
     updateLobby(playerString, isHost);
