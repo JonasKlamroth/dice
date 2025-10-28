@@ -1,16 +1,30 @@
 import { Claim, Status } from './types.js';
 import * as doc from './docInteraction.js';
-var playerID = getPlayerIdFromCookie();
-if (playerID != null) {
-    console.debug("Did not find old player ID. Default to 0.");
-    playerID = "0";
-}
 const socket = io("http://192.168.1.104:5000");
-socket.emit('register_player', playerID, socket.id);
+socket.on('connect', () => {
+    var playerID = getPlayerIdFromCookie();
+    if (playerID == null) {
+        console.debug("Did not find old player ID. Default to 0.");
+        playerID = "0";
+    }
+    else {
+        localStorage.setItem("DICE_currentPlayerId", playerID);
+    }
+    socket.emit('register_player', playerID, socket.id);
+});
 socket.on('update_game_state', (gameState) => { updateUI(gameState); });
-socket.on('update_players', (playerString) => {
-    document.getElementById('info-section').innerText = "Currently in the lobby: \n" + playerString;
-    createButton('info-section', 'startGame', 'Start Game', startGame);
+socket.on('update_players', (playerString, isHost) => {
+    updateLobby(playerString, isHost);
+});
+function updateLobby(playersString, isHost) {
+    document.getElementById('info-section').innerText = "Currently in the lobby: \n" + playersString;
+    if (isHost) {
+        createButton('info-section', 'startGame', 'Start Game', startGame);
+    }
+}
+socket.on('game_ended', (playersString, isHost) => {
+    location.reload();
+    updateLobby(playersString, isHost);
 });
 socket.on('game_started', (gameStateString) => {
     const gameState = JSON.parse(gameStateString);
@@ -35,8 +49,8 @@ function savePlayerIdToCookie(playerId) {
 // Function to retrieve a cookie
 function getPlayerIdFromCookie() {
     console.debug("Getting player ID to cookie: PlayerId");
-    var playerId = localStorage.getItem("DICE_currentPlayerId");
-    console.debug(playerID);
+    const playerId = localStorage.getItem("DICE_currentPlayerId");
+    console.debug(playerId);
     return playerId;
 }
 function createButton(parentId, buttonId, buttonText, onClickFunction) {
@@ -50,8 +64,8 @@ function createButton(parentId, buttonId, buttonText, onClickFunction) {
 export function startGame() {
     socket.emit('start_game');
 }
-export function restartGame() {
-    socket.emit('restart_game', gameID);
+export function backToLobby() {
+    socket.emit('endGame', gameID);
 }
 window.onload = letsGo;
 var currentPlayer;
@@ -80,7 +94,9 @@ function updateUI(gameStateString) {
     });
     if (currentNumPlayers <= 1) {
         doc.deactivatePlayerTurnSection();
-        createButton('info-section', 'startGame', 'Play again', restartGame);
+        if (socket.id == currentPlayer.id) {
+            createButton('info-section', 'startGame', 'Back to lobby', backToLobby);
+        }
         // Remove the 'dead' class for all players
         players.forEach((player) => {
             const diceContainer = document.getElementById('dice-container' + players.indexOf(player));

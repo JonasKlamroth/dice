@@ -32,11 +32,12 @@ class Game:
         self.players = players
         self.current_player = players[0]
         self.claiming_player = None
+        self.statusMessages = []
         self.logger = logging.getLogger(f"Game-{self.id}")
         self.logger.debug(f"Game initialized with players: {[p.name for p in players]}")
-        statusMessaageHandler = StatusMessageHandler(self)
-        statusMessaageHandler.setLevel(logging.INFO)
-        self.logger.addHandler(statusMessaageHandler)
+        statusMessageHandler = StatusMessageHandler(self)
+        statusMessageHandler.setLevel(logging.INFO)
+        self.logger.addHandler(statusMessageHandler)
     
     def restart(self):
         self.statusMessages = []

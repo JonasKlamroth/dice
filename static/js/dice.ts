@@ -4,20 +4,37 @@ import * as doc from './docInteraction.js';
 // Socket.IO is loaded via CDN, so io is available globally
 declare const io: any;
 
-var playerID = getPlayerIdFromCookie();
-if (playerID != null) {
-    console.debug("Did not find old player ID. Default to 0.");
-    playerID = "0";
-}
 
 const socket = io("http://192.168.1.104:5000");
-socket.emit('register_player', playerID, socket.id);
+socket.on('connect', () => {
+    var playerID = getPlayerIdFromCookie();
+    if (playerID == null) {
+        console.debug("Did not find old player ID. Default to 0.");
+        playerID = "0";
+    } else {
+        localStorage.setItem("DICE_currentPlayerId", playerID);
+    }
+
+    socket.emit('register_player', playerID, socket.id);
+});
 
 socket.on('update_game_state', (gameState) => {updateUI(gameState);});
-socket.on('update_players', (playerString) => {
-    document.getElementById('info-section').innerText = "Currently in the lobby: \n" + playerString;
-    createButton('info-section', 'startGame', 'Start Game', startGame);
+socket.on('update_players', (playerString, isHost) => {
+    updateLobby(playerString, isHost);
 });
+
+function updateLobby(playersString, isHost) {
+    document.getElementById('info-section').innerText = "Currently in the lobby: \n" + playersString;
+    if (isHost) {
+        createButton('info-section', 'startGame', 'Start Game', startGame);
+    }
+}
+
+socket.on('game_ended', (playersString, isHost) => {
+    location.reload();
+    updateLobby(playersString, isHost);
+});
+
 socket.on('game_started', (gameStateString) => {
     const gameState : GameState = JSON.parse(gameStateString);
     gameID = gameState.gameID;
@@ -26,8 +43,6 @@ socket.on('game_started', (gameStateString) => {
     currentPlayer = players[gameState.current_player.id];
     currentNumPlayers = players.filter(p => p.lives > 0).length;
     doc.activateMainSection();
-
-
 
     createPlayerSections();
     doc.createPlayerTurnSection(doubt, claim, new Claim(0, 0));
@@ -49,8 +64,8 @@ function savePlayerIdToCookie(playerId: string) {
 // Function to retrieve a cookie
 function getPlayerIdFromCookie(): string | null {
     console.debug("Getting player ID to cookie: PlayerId");
-    var playerId = localStorage.getItem("DICE_currentPlayerId");
-    console.debug(playerID);
+    const playerId = localStorage.getItem("DICE_currentPlayerId");
+    console.debug(playerId);
     return playerId;
 }
 
@@ -67,8 +82,8 @@ export function startGame() {
     socket.emit('start_game');
 }
 
-export function restartGame() {
-    socket.emit('restart_game', gameID);
+export function backToLobby() {
+    socket.emit('endGame', gameID);
 }
 
 window.onload = letsGo;
@@ -103,7 +118,10 @@ function updateUI(gameStateString: string) {
     
     if (currentNumPlayers <= 1) {
         doc.deactivatePlayerTurnSection();
-        createButton('info-section', 'startGame', 'Play again', restartGame);
+
+        if(socket.id == currentPlayer.id) {
+            createButton('info-section', 'startGame', 'Back to lobby', backToLobby);
+        }
 
         // Remove the 'dead' class for all players
         players.forEach((player) => {

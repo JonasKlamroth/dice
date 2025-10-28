@@ -13,7 +13,7 @@ class Status:
 class Player:
     names = ['Stag', 'Fishy', 'Meow', 'Runner', 'Butterfly', 'Tank', 'Klaus']
 
-    def __init__(self, id, name="", dice=None, lives=5, claim=None, status=Status.WAITING):
+    def __init__(self, id, name="", dice=None, lives=2, claim=None, status=Status.WAITING):
         self.id = id
         self.name = name
         self.dice = dice if dice is not None else []

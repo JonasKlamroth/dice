@@ -24,9 +24,10 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-games = []  # Store connected players
+games = []  # Store running games
 gamesByPlayerId = {} # Mapping player id to game
 players = []
+disconnected_players = []
 
 def get_players_list():
     """Generate a string of all currently connected players."""
@@ -35,9 +36,20 @@ def get_players_list():
 
 @socketio.on("disconnect")
 def handle_disconnect():
+    logger.debug(f"Player disconnecting: {request.sid}")
+    logger.debug(f"Current playerIds: {[player.id for player in players]}")
     disconnected_player = next(player for player in players if player.id == request.sid)
-    if gamesByPlayerId.get(disconnected_player.id, None):
-        return
+    game = gamesByPlayerId.get(disconnected_player.id, None)
+    if game:
+        disconnected_players.append(disconnected_player)
+        for p in game.players:
+            if p not in disconnected_players:
+                return
+        handle_end_game(game.id)
+        for p in game.players:
+            disconnected_players.remove(p)
+            players.remove(p)
+        return 
     players.remove(disconnected_player)
     logger.debug(f"Player disconnected: {disconnected_player}")
     playersString = get_players_list()
@@ -70,6 +82,7 @@ def handle_id_update(oldID, newID):
     """Sends the player their assigned ID."""
 
     logger.debug(f"Player registration received: oldID={oldID}, newID={newID}")
+    logger.debug(f"Current players: {[p.id for p in players]}")
     playersWithCorrectID = [p for p in players if p.id == oldID]
     if not playersWithCorrectID:
         if len(games) > 0:
@@ -85,12 +98,33 @@ def handle_id_update(oldID, newID):
         players.append(player)
         playersString = get_players_list()
         logger.debug(f"Players: {playersString}")
-        emit("update_players", playersString, broadcast=True)
-        return
+        for p in players:
+            socketio.emit("update_players", (playersString, p==players[0]), to=p.id)
+        return 
 
     logger.debug(f"Updating player ID from {oldID} to {newID}")
+    disconnected_players.remove(playersWithCorrectID[0])
     playersWithCorrectID[0].id = newID
     gamesByPlayerId[newID] = gamesByPlayerId.pop(oldID)
+    game = gamesByPlayerId[request.sid]
+    socketio.emit("game_started", game.toJSON(), to=request.sid)
+    broadcastUpdate(game)
+
+@socketio.on("endGame")
+def handle_end_game(data):
+    """Ends the current game and resets the server state."""
+    game = next((g for g in games if data == g.id), None)
+    if game:
+        logger.debug(f"Ending game with id {data}")
+        games.remove(game)
+        for player in game.players:
+            if player.id in gamesByPlayerId:
+                del gamesByPlayerId[player.id]
+        playersString = get_players_list()
+        for p in players:
+            socketio.emit("game_ended", (playersString, p==players[0]), to=p.id)
+    else:
+        logger.error(f"Game with id {data} not found for ending.")
 
 @socketio.on("claim")
 def handle_claim(data):
@@ -123,8 +157,8 @@ def handle_next_round():
         broadcastUpdate(currentGame)
 
 def broadcastUpdate(game):
-    while(game.current_player.isAI):
-        game.ai_take_turn()
+    #while(game.current_player.isAI):
+        #game.ai_take_turn()
     data = game.toJSON()
     emit("update_game_state", data, broadcast=True)
 
