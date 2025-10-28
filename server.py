@@ -35,10 +35,14 @@ def get_players_list():
 
 
 @socketio.on("disconnect")
-def handle_disconnect(sid=None):
+def handle_disconnect():
     logger.debug(f"Player disconnecting: {request.sid}")
     logger.debug(f"Current playerIds: {[player.id for player in players]}")
-    disconnected_player = next(player for player in players if player.id == request.sid)
+    disconnected_players = [player for player in players if player.id == request.sid]
+    if not disconnected_players:
+        logger.debug(f"No matching player found for disconnected id: {request.sid}")
+        return
+    disconnected_player = disconnected_players[0]
     game = gamesByPlayerId.get(disconnected_player.id, None)
     if game:
         disconnected_players.append(disconnected_player)
@@ -167,4 +171,4 @@ def home():
     return render_template("game.html")
 
 if __name__ == "__main__":
-    socketio.run(app, host="0.0.0.0", port=8000, debug=False)
+    socketio.run(app, host="0.0.0.0", port=5000, debug=True)
