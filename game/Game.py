@@ -2,6 +2,7 @@ import logging
 import random 
 import numpy as np
 import json
+import random
 from game.Claim import Claim
 from game.Player import Player, Status
 
@@ -127,6 +128,18 @@ class Game:
         self.logger.info(f"Game started. First player: {self.current_player.name}")
         self.start_new_round()
         self.current_player.status = Status.THINKING
+
+    def ai_take_turn(self):
+        self.logger.debug(f"AI player {self.current_player.name} is taking its turn.")
+        diceVal = self.current_claim.diceVal
+        expectedCountBase = (len(self.players) - 1) * 5 // 3 
+        expectedCount = expectedCountBase + sum(1 for d in self.current_player.dice if d == diceVal or d == 1)
+        random_number = random.choice([-1, 0, 1])
+        if self.current_claim.count > expectedCount + random_number:
+            #realistic claim 
+            pass
+        else:
+            self.doubt()
 
     def reset_claims(self):
         self.logger.debug("Resetting claims for all players.")

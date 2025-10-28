@@ -33,21 +33,11 @@ def get_players_list():
     return ", ".join(player.name for player in players)
 
 
-@socketio.on("connect")
-def handle_connect():
-    if len(players) >= len(Player.names):
-        logger.warning("Maximum number of players reached. Connection refused.")
-        return False
-    player = Player(request.sid, Player.names[len(players)])
-    logger.debug(f"Player connected: {player}")
-    players.append(player)
-    playersString = get_players_list()
-    logger.debug(f"Players: {playersString}")
-    emit("update_players", playersString, broadcast=True)
-
 @socketio.on("disconnect")
 def handle_disconnect():
     disconnected_player = next(player for player in players if player.id == request.sid)
+    if gamesByPlayerId.get(disconnected_player.id, None):
+        return
     players.remove(disconnected_player)
     logger.debug(f"Player disconnected: {disconnected_player}")
     playersString = get_players_list()
@@ -74,6 +64,33 @@ def handle_create_game():
     game.start_game()
     logger.debug("Game started")
     emit("game_started", game.toJSON(), broadcast=True)
+
+@socketio.on("register_player")
+def handle_id_update(oldID, newID):
+    """Sends the player their assigned ID."""
+
+    logger.debug(f"Player registration received: oldID={oldID}, newID={newID}")
+    playersWithCorrectID = [p for p in players if p.id == oldID]
+    if not playersWithCorrectID:
+        if len(games) > 0:
+            logger.debug("Game already in progress. Connection refused.")
+            return False
+        logger.debug(f"No player found with old ID: {oldID}")
+        logger.debug("Register new player.")
+        if len(players) >= len(Player.names):
+            logger.warning("Maximum number of players reached. Connection refused.")
+            return False
+        player = Player(request.sid, Player.names[len(players)])
+        logger.debug(f"Player connected: {player} with ID {request.sid}")
+        players.append(player)
+        playersString = get_players_list()
+        logger.debug(f"Players: {playersString}")
+        emit("update_players", playersString, broadcast=True)
+        return
+
+    logger.debug(f"Updating player ID from {oldID} to {newID}")
+    playersWithCorrectID[0].id = newID
+    gamesByPlayerId[newID] = gamesByPlayerId.pop(oldID)
 
 @socketio.on("claim")
 def handle_claim(data):
@@ -106,6 +123,8 @@ def handle_next_round():
         broadcastUpdate(currentGame)
 
 def broadcastUpdate(game):
+    while(game.current_player.isAI):
+        game.ai_take_turn()
     data = game.toJSON()
     emit("update_game_state", data, broadcast=True)
 

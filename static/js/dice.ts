@@ -4,7 +4,15 @@ import * as doc from './docInteraction.js';
 // Socket.IO is loaded via CDN, so io is available globally
 declare const io: any;
 
-const socket = io("http://127.0.0.1:5000");
+var playerID = getPlayerIdFromCookie();
+if (playerID != null) {
+    console.debug("Did not find old player ID. Default to 0.");
+    playerID = "0";
+}
+
+const socket = io("http://192.168.1.104:5000");
+socket.emit('register_player', playerID, socket.id);
+
 socket.on('update_game_state', (gameState) => {updateUI(gameState);});
 socket.on('update_players', (playerString) => {
     document.getElementById('info-section').innerText = "Currently in the lobby: \n" + playerString;
@@ -14,9 +22,12 @@ socket.on('game_started', (gameStateString) => {
     const gameState : GameState = JSON.parse(gameStateString);
     gameID = gameState.gameID;
     players = gameState.players;
+    savePlayerIdToCookie(socket.id);
     currentPlayer = players[gameState.current_player.id];
     currentNumPlayers = players.filter(p => p.lives > 0).length;
     doc.activateMainSection();
+
+
 
     createPlayerSections();
     doc.createPlayerTurnSection(doubt, claim, new Claim(0, 0));
@@ -25,6 +36,23 @@ socket.on('game_started', (gameStateString) => {
     players.forEach((p) => {doc.updatePlayerSection(p)});
     updateUI(gameStateString);
 })
+
+
+
+function savePlayerIdToCookie(playerId: string) {
+    localStorage.setItem("DICE_currentPlayerId", playerId); 
+    console.debug("Saved player ID to cookie:", playerId);
+    const playerIdRead = localStorage.getItem("DICE_currentPlayerId");
+    console.debug(playerIdRead);
+}
+
+// Function to retrieve a cookie
+function getPlayerIdFromCookie(): string | null {
+    console.debug("Getting player ID to cookie: PlayerId");
+    var playerId = localStorage.getItem("DICE_currentPlayerId");
+    console.debug(playerID);
+    return playerId;
+}
 
 function createButton(parentId, buttonId, buttonText, onClickFunction) {
     const parentElement = document.getElementById(parentId);
