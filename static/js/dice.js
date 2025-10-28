@@ -1,6 +1,6 @@
 import { Claim, Status } from './types.js';
 import * as doc from './docInteraction.js';
-const socket = io("http://192.168.1.104:5000");
+const socket = io("https://liarsdice.onrender.com");
 socket.on('connect', () => {
     var playerID = getPlayerIdFromCookie();
     if (playerID == null) {
