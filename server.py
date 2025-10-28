@@ -35,7 +35,7 @@ def get_players_list():
 
 
 @socketio.on("disconnect")
-def handle_disconnect():
+def handle_disconnect(sid=None):
     logger.debug(f"Player disconnecting: {request.sid}")
     logger.debug(f"Current playerIds: {[player.id for player in players]}")
     disconnected_player = next(player for player in players if player.id == request.sid)

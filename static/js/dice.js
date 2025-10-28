@@ -2,6 +2,11 @@ import { Claim, Status } from './types.js';
 import * as doc from './docInteraction.js';
 const socket = io('https://liarsdice.onrender.com');
 socket.on('update_game_state', (gameState) => { updateUI(gameState); });
+socket.on('update_players', (playerString) => {
+    document.getElementById('info-section').innerText = "Currently in the lobby: \n" + playerString;
+    createButton('info-section', 'startGame', 'Start Game', startGame);
+});
+socket.on('update_game_state', (gameState) => { updateUI(gameState); });
 socket.on('update_players', (playerString, isHost) => {
     updateLobby(playerString, isHost);
 });
