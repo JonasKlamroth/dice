@@ -3,7 +3,7 @@ export class GameState {
     gameID: number;
     players: Player[];
     current_player: Player;
-    claiming_player: Player;
+    claiming_player: Player | null;
     statusMessages: string[];
     revealDiceVal : number = 0; 
     currentClaim: Claim = new Claim();
@@ -42,7 +42,7 @@ export class Player {
     claim: Claim;
     dice: number[];
     status: Status;
-    constructor(name, id, lives = 5, claim = new Claim(), dice = [], status = Status.WAITING) {
+    constructor(name: string, id: string, lives = 5, claim = new Claim(), dice = [], status = Status.WAITING) {
         this.name = name;
         this.id = id;
         this.lives = lives;

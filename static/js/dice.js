@@ -1,6 +1,6 @@
 import { Claim, Status } from './types.js';
 import * as doc from './docInteraction.js';
-const socket = io("http://192.168.1.104:5000");
+const socket = io("http://192.168.178.52:5000");
 socket.on('connect', () => {
     var playerID = getPlayerIdFromCookie();
     if (playerID == null) {
@@ -17,7 +17,10 @@ socket.on('update_players', (playerString, isHost) => {
     updateLobby(playerString, isHost);
 });
 function updateLobby(playersString, isHost) {
-    document.getElementById('info-section').innerText = "Currently in the lobby: \n" + playersString;
+    const infoEl = document.getElementById('info-section');
+    infoEl.innerText = "Currently in the lobby: \n" + playersString;
+    // Ensure name change controls exist (only in lobby)
+    createNameChangeControls();
     if (isHost) {
         createButton('info-section', 'startGame', 'Start Game', startGame);
     }
@@ -79,6 +82,38 @@ function letsGo() {
     //doc.createRulesSection();
     //doc.createGameChoices(startGame);
     document.getElementById('info-section').innerText = 'Waiting for players...';
+}
+// Creates a small input + button next to the info section to change player name while in lobby
+function createNameChangeControls() {
+    const parentElement = document.getElementById('info-section');
+    if (!parentElement)
+        return;
+    // Avoid duplicating the controls on repeated lobby updates
+    let container = document.getElementById('name-change-container');
+    if (container)
+        return;
+    container = document.createElement('div');
+    container.id = 'name-change-container';
+    container.style.display = 'flex';
+    container.style.gap = '8px';
+    container.style.marginTop = '8px';
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.id = 'name-input';
+    input.placeholder = 'Enter your name';
+    const button = document.createElement('button');
+    button.id = 'change-name-button';
+    button.innerText = 'Change name';
+    button.onclick = () => {
+        var _a, _b;
+        const value = (_b = (_a = document.getElementById('name-input')) === null || _a === void 0 ? void 0 : _a.value) === null || _b === void 0 ? void 0 : _b.trim();
+        if (value) {
+            socket.emit('change_name', value);
+        }
+    };
+    container.appendChild(input);
+    container.appendChild(button);
+    parentElement.appendChild(container);
 }
 function updateUI(gameStateString) {
     const gameState = JSON.parse(gameStateString);

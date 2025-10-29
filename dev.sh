@@ -53,17 +53,13 @@ fi
 # Function to compile TypeScript files
 compile_typescript() {
     print_status "Compiling TypeScript files..."
-    
-    # Compile all TypeScript files in static/js
-    for ts_file in static/js/*.ts; do
-        if [ -f "$ts_file" ]; then
-            js_file="${ts_file%.ts}.js"
-            print_status "Compiling $(basename $ts_file)..."
-            tsc "$ts_file" --outDir static/js --target ES6 --module ES6 --sourceMap --lib ES2023,dom --moduleResolution node
-        fi
-    done
-    
-    print_success "TypeScript compilation complete"
+
+    if [ -f tsconfig.json ]; then
+        tsc
+    else
+        print_status "Error: tsconfig.json not found."
+        return 1
+    fi
 }
 
 # Function to kill existing server process

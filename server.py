@@ -110,6 +110,32 @@ def handle_id_update(oldID, newID):
     socketio.emit("game_started", game.toJSON(), to=request.sid)
     broadcastUpdate(game)
 
+@socketio.on("change_name")
+def handle_change_name(new_name):
+    """Handle player name change while in lobby."""
+    logger.debug(f"Name change requested: new_name={new_name}, from player {request.sid}")
+    
+    # Find the player making the request
+    player = next((p for p in players if p.id == request.sid), None)
+    if not player:
+        logger.warning(f"Player {request.sid} not found in players list")
+        return
+    
+    # Check if player is in a game - name changes should only be allowed in lobby
+    if request.sid in gamesByPlayerId:
+        logger.debug(f"Player {request.sid} is in a game. Name change not allowed.")
+        return
+    
+    # Update the player's name
+    old_name = player.name
+    player.name = new_name.strip() if new_name else old_name
+    logger.debug(f"Changed player name from '{old_name}' to '{player.name}'")
+    
+    # Broadcast updated player list to all players
+    playersString = get_players_list()
+    for p in players:
+        socketio.emit("update_players", (playersString, p==players[0]), to=p.id)
+
 @socketio.on("endGame")
 def handle_end_game(data):
     """Ends the current game and resets the server state."""
